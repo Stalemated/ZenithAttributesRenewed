@@ -20,6 +20,7 @@ public class ALConfig {
 
     public static boolean enableAttributesGui = true;
     public static boolean enablePotionTooltips = true;
+    public static boolean iconAwareReordering = false;
     public static Set<ResourceLocation> hiddenAttributes = new HashSet<>();
 
     private static Optional<Expression> protExpr;
@@ -30,6 +31,7 @@ public class ALConfig {
         Configuration cfg = new Configuration(AttributesLib.MODID);
         enableAttributesGui = cfg.getBoolean("Enable Attributes GUI", "general", true, "If the Attributes GUI is available.");
         enablePotionTooltips = cfg.getBoolean("Enable Potion Tooltips", "general", true, "If description tooltips will be added to potion items.");
+        iconAwareReordering = cfg.getBoolean("Enable icon-aware list reordering", "general", false, "If attributes that have icons in their names should go on top of the list.");
         String[] hidden = cfg.getStringList("Hidden Attributes", "general", DEFAULT_BLOCKED_ATTRIBUTES, "A list of attributes that will be hidden from the Attributes GUI.");
 
         hiddenAttributes.clear();

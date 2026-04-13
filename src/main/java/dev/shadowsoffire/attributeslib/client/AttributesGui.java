@@ -8,6 +8,7 @@ import dev.shadowsoffire.attributeslib.api.ALObjects;
 import dev.shadowsoffire.attributeslib.api.IFormattableAttribute;
 import dev.shadowsoffire.attributeslib.mixin.accessors.AbstractContainerScreenAccessor;
 import dev.shadowsoffire.attributeslib.mixin.accessors.GuiGraphicsAccessor;
+import dev.shadowsoffire.attributeslib.util.AttributeSorter;
 import dev.shadowsoffire.placebo.PlaceboClient;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -102,7 +103,10 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
                 .filter(ai -> !hideUnchanged || (ai.getBaseValue() != ai.getValue()))
                 .filter(ai -> !Double.isNaN(ai.getValue()))
                 .forEach(this.data::add);
-        this.data.sort(this::compareAttrs);
+
+        if (ALConfig.iconAwareReordering) this.data.sort(AttributeSorter.ICON_SAFE_COMPARATOR);
+        else this.data.sort(this::compareAttrs);
+
         this.startIndex = (int) (scrollOffset * this.getOffScreenRows() + 0.5D);
     }
 
