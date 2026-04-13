@@ -16,41 +16,40 @@ public class AttributeSorter {
     private static final Map<Attribute, AttributeData> CACHE = new ConcurrentHashMap<>();
 
     public static final Comparator<? super AttributeInstance> ICON_SAFE_COMPARATOR = (attr1, attr2) -> {
-        Attribute a1 = attr1.getAttribute();
-        Attribute a2 = attr2.getAttribute();
+        AttributeData data1 = CACHE.computeIfAbsent(attr1.getAttribute(), AttributeSorter::computeData);
+        AttributeData data2 = CACHE.computeIfAbsent(attr2.getAttribute(), AttributeSorter::computeData);
 
-        AttributeData data1 = CACHE.computeIfAbsent(a1, AttributeSorter::computeData);
-        AttributeData data2 = CACHE.computeIfAbsent(a2, AttributeSorter::computeData);
+        int iconPriority = Boolean.compare(data2.hasIcon(), data1.hasIcon());
 
-        if (data1.hasIcon() && !data2.hasIcon()) return -1;
-        else if (!data1.hasIcon() && data2.hasIcon()) return 1;
+        if (iconPriority != 0) {
+            return iconPriority;
+        }
 
         return data1.cleanName().compareToIgnoreCase(data2.cleanName());
     };
 
     private static AttributeData computeData(Attribute attribute) {
         String rawName = I18n.get(attribute.getDescriptionId());
-        boolean hasIcon = containsIcon(rawName);
 
-        String noFormatting = ChatFormatting.stripFormatting(rawName);
-        if (noFormatting == null) noFormatting = "";
-
-        String cleanName = stripIcons(noFormatting);
-
-        return new AttributeData(cleanName, hasIcon);
-    }
-
-    private static boolean containsIcon(String input) {
-        if (input == null || input.isEmpty()) return false;
-
-        for (int i = 0; i < input.length(); ) {
-            int codePoint = input.codePointAt(i);
-            if (isIconCodePoint(codePoint)) {
-                return true;
-            }
-            i += Character.charCount(codePoint);
+        if (rawName == null || rawName.isEmpty()) {
+            return new AttributeData("", false);
         }
-        return false;
+
+        ChatFormatting.stripFormatting(rawName);
+        StringBuilder clean = new StringBuilder(rawName.length());
+        boolean hasIcon = false;
+
+        for (int i = 0; i < rawName.length(); ) {
+            int codePoint = rawName.codePointAt(i);
+            int charCount = Character.charCount(codePoint);
+
+            if (isIconCodePoint(codePoint)) hasIcon = true;
+            else clean.appendCodePoint(codePoint);
+
+            i += charCount;
+        }
+
+        return new AttributeData(clean.toString().trim(), hasIcon);
     }
 
     private static boolean isIconCodePoint(int codePoint) {
@@ -60,18 +59,7 @@ public class AttributeSorter {
                 (codePoint >= 0x2700 && codePoint <= 0x27BF); // Misc Symbols (Dingbats)
     }
 
-    private static String stripIcons(String input) {
-        if (input == null || input.isEmpty()) return "";
-
-        StringBuilder clean = new StringBuilder();
-        for (int i = 0; i < input.length(); ) {
-            int codePoint = input.codePointAt(i);
-            if (!isIconCodePoint(codePoint)) {
-                clean.appendCodePoint(codePoint);
-            }
-            i += Character.charCount(codePoint);
-        }
-
-        return clean.toString().trim();
+    public static void clearCache() {
+        CACHE.clear();
     }
 }

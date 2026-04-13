@@ -92,6 +92,7 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
         }
         else this.recipeBookButton = null;
         this.hideUnchangedBtn = new HideUnchangedButton(0, 0);
+        if (ALConfig.iconAwareReordering) AttributeSorter.clearCache();
     }
 
     public void refreshData() {
@@ -134,8 +135,8 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
     }
 
     protected int compareAttrs(AttributeInstance a1, AttributeInstance a2) {
-        String name = I18n.get(a1.getAttribute().getDescriptionId());
-        String name2 = I18n.get(a2.getAttribute().getDescriptionId());
+        String name = I18n.get(a1.getAttribute().getDescriptionId()).trim();
+        String name2 = I18n.get(a2.getAttribute().getDescriptionId()).trim();
         return name.compareTo(name2);
     }
 
