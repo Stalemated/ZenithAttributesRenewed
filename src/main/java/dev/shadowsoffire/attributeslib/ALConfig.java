@@ -23,6 +23,9 @@ public class ALConfig {
     public static boolean iconAwareReordering = false;
     public static Set<ResourceLocation> hiddenAttributes = new HashSet<>();
 
+    public static float knowledgeMult = 4.0f;
+    public static knowledgeMultCurveType knowledgeMultCurve = knowledgeMultCurveType.EXPONENTIAL;
+
     private static Optional<Expression> protExpr;
     private static Optional<Expression> aValueExpr;
     private static Optional<Expression> armorExpr;
@@ -40,9 +43,13 @@ public class ALConfig {
                 hiddenAttributes.add(new ResourceLocation(name));
             }
             catch (ResourceLocationException ex) {
-                AttributesLib.LOGGER.error("Ignoring invalid \"Hidden Attributes\" config entry " + name, ex);
+                AttributesLib.LOGGER.error("Ignoring invalid \"Hidden Attributes\" config entry {}", name, ex);
             }
         }
+
+        knowledgeMult = cfg.getFloat("Knowledge Modifier", "effects", 4.0f, 0.0f, Integer.MAX_VALUE, "The strength of Ancient Knowledge. This multiplier determines how much additional xp is granted.\nServer-authoritative.");
+        knowledgeMultCurve = knowledgeMultCurveType.valueOf(cfg.getString("Knowledge Modifier Curve", "effects", "SQUARE", "The curve used to determine Ancient Knowledge's multiplier.\nLINEAR: Knowledge Modifier * Level\nEXPONENTIAL: Knowledge Modifier ^ Level\nSQUARE: Knowledge Modifier * (Level ^ 2)"));
+
 
         protExpr = readConfigExpression(cfg, "Protection Formula", "combat_rules", "1 - min(0.025 * protPoints, 0.85)",
                 """
@@ -146,5 +153,9 @@ public class ALConfig {
         public void onResourceManagerReload(ResourceManager resourceManager) {
             ALConfig.load();
         }
+    }
+
+    public enum knowledgeMultCurveType {
+        LINEAR, EXPONENTIAL, SQUARE
     }
 }

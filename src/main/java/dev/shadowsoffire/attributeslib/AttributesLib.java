@@ -42,8 +42,6 @@ public class AttributesLib implements ModInitializer {
      */
     public static float localAtkStrength = 1;
 
-    public static int knowledgeMult = 4;
-
     @Override
     public void onInitialize() {
         ALObjects.bootstrap();
