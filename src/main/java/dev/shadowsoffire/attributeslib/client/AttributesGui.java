@@ -39,6 +39,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import org.jetbrains.annotations.Nullable;
 
@@ -224,21 +225,28 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
             }
 
             double currentVal = inst.getValue();
+            double baseVal = inst.getBaseValue();
+            double spBonus = 0;
+
             if (FabricLoader.getInstance().isModLoaded("spell_power")) {
                 currentVal = SpellPowerCompat.getRealSpellValue(attr, this.player, currentVal);
+                baseVal = SpellPowerCompat.getRealSpellBaseValue(attr, baseVal);
+                spBonus = SpellPowerCompat.getSpellPowerBonus(attr, currentVal, baseVal, inst.getValue(), inst.getBaseValue());
             }
 
             ChatFormatting color = ChatFormatting.GRAY;
             if (attr instanceof RangedAttribute) {
-                if (currentVal > inst.getBaseValue()) {
+                if (currentVal > baseVal) {
                     color = ChatFormatting.YELLOW;
                 }
-                else if (currentVal < inst.getBaseValue()) {
+                else if (currentVal < baseVal) {
                     color = ChatFormatting.RED;
                 }
             }
             Component valueComp = fAttr.toValueComponent(null, currentVal, AttributesLib.getTooltipFlag()).withStyle(color);
             Component baseComp = fAttr.toValueComponent(null, inst.getBaseValue(), AttributesLib.getTooltipFlag()).withStyle(ChatFormatting.GRAY);
+            Component baseSpComp = fAttr.toValueComponent(null, baseVal, AttributesLib.getTooltipFlag()).withStyle(ChatFormatting.GRAY);
+
             if (!isDynamic) {
                 list.add(CommonComponents.EMPTY);
                 list.add(Component.translatable("zenith_attributes.gui.current", valueComp).withStyle(ChatFormatting.GRAY));
@@ -259,7 +267,9 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
                 this.addComp(txt, finalTooltip);
             }
 
-            if (inst.getModifiers().stream().anyMatch(modif -> modif.getAmount() != 0)) {
+            boolean hasModifiers = inst.getModifiers().stream().anyMatch(modif -> modif.getAmount() != 0) || Math.abs(spBonus) > 0.0001;
+
+            if (hasModifiers) {
                 this.addComp(CommonComponents.EMPTY, finalTooltip);
                 this.addComp(Component.translatable("zenith_attributes.gui.modifiers").withStyle(ChatFormatting.GOLD), finalTooltip);
 
@@ -269,11 +279,25 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
                     type.extract(this.player, (modif, source) -> modifiersToSources.put(modif.getId(), source));
                 }
 
+                UUID spUuid = UUID.fromString("c537fe6b-026c-4519-8f72-02abb286c5c9");
+
+                if (FabricLoader.getInstance().isModLoaded("spell_power")) {
+                    ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+                    ModifierSource<?> spSource = new ModifierSource.ItemModifierSource(book);
+                    modifiersToSources.put(spUuid, spSource);
+                }
+
                 MutableComponent[] opValues = new MutableComponent[3];
                 double[] numericValues = new double[3];
 
                 for (Operation op : Operation.values()) {
                     List<AttributeModifier> modifiers = new ArrayList<>(inst.getModifiers(op));
+
+                    if (op == Operation.MULTIPLY_BASE && Math.abs(spBonus) > 0.0001) {
+                        AttributeModifier spMod = new AttributeModifier(spUuid, "Spell Power / Enchants", spBonus, Operation.MULTIPLY_BASE);
+                        modifiers.add(spMod);
+                    }
+
                     double opValue = modifiers.stream().mapToDouble(AttributeModifier::getAmount).reduce(op == Operation.MULTIPLY_TOTAL ? 1 : 0, (res, elem) -> op == Operation.MULTIPLY_TOTAL ? res * (1 + elem) : res + elem);
 
                     modifiers.sort(ModifierSourceType.compareBySource(modifiersToSources));
@@ -301,8 +325,9 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
                 this.addComp(CommonComponents.EMPTY, finalTooltip);
                 this.addComp(Component.literal("Modifier Formula").withStyle(ChatFormatting.GOLD), finalTooltip);
                 Component base = isDynamic ? Component.translatable("attributeslib.gui.formula.base") : baseComp;
+                Component spBase = isDynamic ? Component.translatable("attributeslib.gui.formula.sp_base") : baseSpComp;
                 Component value = isDynamic ? Component.translatable("attributeslib.gui.formula.value") : valueComp;
-                Component formula = buildFormula(base, value, numericValues);
+                Component formula = buildFormula(base, spBase, value, numericValues);
                 this.addComp(formula, finalTooltip);
             }
             else if (isDynamic) {
@@ -487,7 +512,7 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
      * @param numericValues The modifier totals, in operation ordinal order (add, mulBase, mulTotal)
      * @return A component holding the formula with colors already applied.
      */
-    public static Component buildFormula(Component base, Component value, double[] numericValues) {
+    public static Component buildFormula(Component base, Component spBase, Component value, double[] numericValues) {
         double add = numericValues[0];
         double mulBase = numericValues[1];
         double mulTotal = numericValues[2];
@@ -501,21 +526,31 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
         String mulBaseStr = f.format(mulBase);
         String mulTotalStr = f.format(mulTotal);
         String formula = "%2$s";
+        String formula2 = "%3$s";
         if (add != 0) {
             ChatFormatting color = isAddNeg ? ChatFormatting.RED : ChatFormatting.YELLOW;
-            formula = formula + " " + colored(addSym + " " + addStr, color);
+            String addString = " " + colored(addSym + " " + addStr, color);
+            formula = formula + addString;
+            if (FabricLoader.getInstance().isModLoaded("spell_power")) {
+                formula2 = formula2 + addString;
+            }
         }
         if (mulBase != 0) {
             String withParens = add == 0 ? formula : "(%s)".formatted(formula);
             ChatFormatting color = isMulNeg ? ChatFormatting.RED : ChatFormatting.YELLOW;
             formula = withParens + " " + colored(mulBaseSym + " " + mulBaseStr + " * ", color) + withParens;
+            if (FabricLoader.getInstance().isModLoaded("spell_power")) {
+                String spBaseString = add == 0 ? formula2 : "(%s)".formatted(formula2);
+                formula = spBaseString + " " + colored(mulBaseSym + " " + mulBaseStr + " * ", color) + withParens;
+            }
         }
         if (mulTotal != 1) {
             String withParens = add == 0 && mulBase == 0 ? formula : "(%s)".formatted(formula);
             ChatFormatting color = mulTotal < 1 ? ChatFormatting.RED : ChatFormatting.YELLOW;
             formula = colored(mulTotalStr + " * ", color) + withParens;
         }
-        return Component.translatable("%1$s = " + formula, value, base).withStyle(ChatFormatting.GRAY);
+
+        return Component.translatable("%1$s = " + formula, value, base, spBase).withStyle(ChatFormatting.GRAY);
     }
     /**
      * Colors a string using legacy formatting codes. Terminates the string with {@link ChatFormatting#RESET}.

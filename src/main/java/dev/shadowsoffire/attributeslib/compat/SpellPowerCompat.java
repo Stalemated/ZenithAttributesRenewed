@@ -30,6 +30,9 @@ public class SpellPowerCompat {
             if (SpellPowerMechanics.CRITICAL_DAMAGE.attribute == attribute) {
                 return SpellPower.getSpellPower(SpellSchools.ARCANE, entity).criticalDamage() * 100;
             }
+            if (SpellPowerMechanics.HASTE.attribute == attribute) {
+                return SpellPower.getHaste(entity, SpellSchools.ARCANE) * 100;
+            }
 
         } catch (Throwable ignored) {}
 
@@ -47,5 +50,17 @@ public class SpellPowerCompat {
         } catch (Throwable ignored) {}
 
         return originalBase;
+    }
+
+    public static double getSpellPowerBonus(Attribute attribute, double spValue, double spBaseValue, double value, double baseValue) {
+        for (SpellSchool school : SpellSchools.all()) {
+            if (school.attribute == attribute) {
+                return (spValue / value) - 1;
+            }
+        }
+        if (SpellPowerMechanics.HASTE.attribute == attribute || SpellPowerMechanics.CRITICAL_CHANCE.attribute == attribute || SpellPowerMechanics.CRITICAL_DAMAGE.attribute == attribute) {
+            return ((spValue - spBaseValue) - (value - baseValue)) / 100;
+        }
+        else return 0;
     }
 }
