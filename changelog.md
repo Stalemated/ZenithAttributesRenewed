@@ -1,5 +1,8 @@
 
 
+## 1.0.2
+* Added attribute display and calculation compatibility with Spell Power's enchants that boost spell power, spell crit chance, spell crit damage and spell haste
+
 ## 1.0.1
 * Added a config to tweak Ancient Knowledge's modifier as well as its multiplier curve type (SQUARE (Default), EXPONENTIAL, LINEAR) (regen the config again)
 
