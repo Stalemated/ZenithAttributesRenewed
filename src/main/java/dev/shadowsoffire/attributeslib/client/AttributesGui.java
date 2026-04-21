@@ -36,6 +36,7 @@ import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.ai.attributes.*;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
@@ -293,6 +294,25 @@ public class AttributesGui implements Renderable, GuiEventListener, NarratableEn
                     ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
                     ModifierSource<?> enchSource = new ModifierSource.ItemModifierSource(book);
                     modifiersToSources.put(enchUuid, enchSource);
+                }
+
+                if (FabricLoader.getInstance().isModLoaded("puffish_skills")) {
+                    ItemStack skillIcon = new ItemStack(Items.EXPERIENCE_BOTTLE);
+
+                    if (FabricLoader.getInstance().isModLoaded("prominent")) {
+                        Item prominentSkillIcon = BuiltInRegistries.ITEM.get(new ResourceLocation("prominent", "knowledge_scroll"));
+                        if (prominentSkillIcon != Items.AIR) {
+                            skillIcon = new ItemStack(prominentSkillIcon);
+                        }
+                    }
+
+                    ModifierSource<?> skillSource = new ModifierSource.ItemModifierSource(skillIcon);
+
+                    for (AttributeModifier mod : inst.getModifiers()) {
+                        if (!modifiersToSources.containsKey(mod.getId())) {
+                            modifiersToSources.put(mod.getId(), skillSource);
+                        }
+                    }
                 }
 
                 MutableComponent[] opValues = new MutableComponent[3];
